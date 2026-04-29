@@ -1,0 +1,9 @@
+{
+  "name": "@lologames/engine",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@lologames/shared": "*",
+    "@standalone/content-riji": "*"
+  }
+}

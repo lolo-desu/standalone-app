@@ -1,0 +1,9 @@
+<template>
+  <main>
+    <button>继续</button>
+    <button>新游戏</button>
+    <button>加载存档</button>
+    <button>设置</button>
+    <button>退出</button>
+  </main>
+</template>

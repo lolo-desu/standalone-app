@@ -1,0 +1,19 @@
+{
+  "name": "standalone-app",
+  "private": true,
+  "packageManager": "bun@1.1.38",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "test": "vitest run && npm run typecheck:test-contracts",
+    "typecheck:test-contracts": "tsc --noEmit --strict --module ESNext --moduleResolution Bundler --target ES2022 --skipLibCheck apps/desktop/src/renderer/stores/session.types-check.ts",
+    "test:shared": "vitest run packages/shared/src/session.test.ts packages/shared/src/runtime.test.ts"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.5",
+    "zod": "^4.1.12"
+  }
+}
