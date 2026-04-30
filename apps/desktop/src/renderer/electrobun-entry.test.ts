@@ -18,6 +18,9 @@ describe('bootstrapElectrobunRenderer', () => {
           },
         }),
         saveAppSettings: async () => {},
+        loadRendererRuntime: async () => ({
+          engineBaseUrl: 'http://127.0.0.1:43111',
+        }),
       },
     };
     const defineRPC = vi.fn().mockReturnValue(rpc);
@@ -45,7 +48,7 @@ describe('bootstrapElectrobunRenderer', () => {
     const runtime = await bootstrapElectrobunRenderer({
       Electroview,
       bootstrapRenderer,
-      locationHref: 'views://renderer/index.html?engineBaseUrl=http%3A%2F%2F127.0.0.1%3A43111',
+      locationHref: 'views://renderer/index.html',
     });
 
     expect(defineRPC).toHaveBeenCalledWith({

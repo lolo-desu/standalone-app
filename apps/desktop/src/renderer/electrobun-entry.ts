@@ -1,4 +1,4 @@
-import { createElectrobunConfigRpcClient, createElectrobunRendererConfigRpc, type WebviewRpcFactory } from '../electrobun-rpc';
+import { createElectrobunConfigRpcClient, createElectrobunRendererConfigRpc, loadRendererRuntime, type WebviewRpcFactory } from '../electrobun-rpc';
 import { bootstrapRenderer as defaultBootstrapRenderer } from './bootstrap';
 
 type ElectroviewInstance = {
@@ -8,6 +8,7 @@ type ElectroviewInstance = {
       saveCredentialProfiles: (...args: unknown[]) => Promise<unknown>;
       loadAppSettings: (...args: unknown[]) => Promise<unknown>;
       saveAppSettings: (...args: unknown[]) => Promise<unknown>;
+      loadRendererRuntime: (...args: unknown[]) => Promise<{ engineBaseUrl: string }>;
     };
   };
 };
@@ -24,29 +25,15 @@ type BootstrapElectrobunRendererDependencies = {
   locationHref?: string;
 };
 
-export function getEngineBaseUrlFromLocation(locationHref: string) {
-  const engineBaseUrl = new URL(locationHref).searchParams.get('engineBaseUrl');
-
-  if (!engineBaseUrl) {
-    throw new Error('Missing engine base URL in renderer location');
-  }
-
-  return engineBaseUrl;
-}
-
 export async function bootstrapElectrobunRenderer(dependencies: BootstrapElectrobunRendererDependencies): Promise<RendererRuntime & { electroview: ElectroviewInstance }> {
   const bootstrapRenderer = dependencies.bootstrapRenderer ?? defaultBootstrapRenderer;
-  const locationHref = dependencies.locationHref ?? globalThis.location?.href;
-
-  if (!locationHref) {
-    throw new Error('Renderer location is not available');
-  }
 
   const rpc = createElectrobunRendererConfigRpc(dependencies.Electroview);
   const electroview = new dependencies.Electroview({ rpc });
+  const rendererRuntime = await loadRendererRuntime(electroview.rpc);
   const runtime = await bootstrapRenderer({
     configRpc: createElectrobunConfigRpcClient(electroview.rpc),
-    engineBaseUrl: getEngineBaseUrlFromLocation(locationHref),
+    engineBaseUrl: rendererRuntime.engineBaseUrl,
   });
 
   return {

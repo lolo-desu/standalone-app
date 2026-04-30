@@ -18,6 +18,10 @@ type ConfigRpcRequestSchema = {
     params: { settings: AppSettings };
     response: void;
   };
+  loadRendererRuntime: {
+    params: {};
+    response: { engineBaseUrl: string };
+  };
 };
 
 export type ElectrobunConfigRpcSchema = {
@@ -31,16 +35,22 @@ export type ElectrobunConfigRpcSchema = {
   };
 };
 
+type MainRpcHandlers = ConfigRpcHandlers & {
+  loadRendererRuntime: (_payload: {}) => Promise<{ engineBaseUrl: string }> | { engineBaseUrl: string };
+};
+
 type BunRpcFactory = {
   defineRPC: <Schema = ElectrobunConfigRpcSchema>(config: {
     handlers: {
-      requests: ConfigRpcHandlers;
+      requests: MainRpcHandlers;
     };
   }) => unknown;
 };
 
 type RendererRpc = {
-  request: ConfigRpcClient['request'];
+  request: ConfigRpcClient['request'] & {
+    loadRendererRuntime: (_payload: {}) => Promise<{ engineBaseUrl: string }>;
+  };
 };
 
 type WebviewRpcFactory = {
@@ -51,7 +61,7 @@ type WebviewRpcFactory = {
   }) => RendererRpc;
 };
 
-export function createElectrobunMainConfigRpc(factory: BunRpcFactory, handlers: ConfigRpcHandlers) {
+export function createElectrobunMainConfigRpc(factory: BunRpcFactory, handlers: MainRpcHandlers) {
   return factory.defineRPC<ElectrobunConfigRpcSchema>({
     handlers: {
       requests: handlers,
@@ -73,4 +83,8 @@ export function createElectrobunConfigRpcClient(rpc: RendererRpc): ConfigRpcClie
   };
 }
 
-export type { BunRpcFactory, RendererRpc, WebviewRpcFactory };
+export async function loadRendererRuntime(rpc: RendererRpc) {
+  return rpc.request.loadRendererRuntime({});
+}
+
+export type { BunRpcFactory, MainRpcHandlers, RendererRpc, WebviewRpcFactory };

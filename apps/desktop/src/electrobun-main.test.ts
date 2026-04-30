@@ -46,16 +46,23 @@ describe('launchElectrobunApp', () => {
       },
       BrowserWindow: BrowserWindow as unknown as new (options: unknown) => unknown,
     });
+    const mainHandlers = defineRPC.mock.calls[0]?.[0]?.handlers?.requests;
 
     expect(bootstrap).toHaveBeenCalledWith();
     expect(defineRPC).toHaveBeenCalledWith({
       handlers: {
-        requests: runtime.configRpcHandlers,
+        requests: expect.objectContaining({
+          ...runtime.configRpcHandlers,
+          loadRendererRuntime: expect.any(Function),
+        }),
       },
+    });
+    expect(mainHandlers.loadRendererRuntime({})).toEqual({
+      engineBaseUrl: runtime.engineBaseUrl,
     });
     expect(BrowserWindow).toHaveBeenCalledWith({
       title: '日记络络',
-      url: 'views://renderer/index.html?engineBaseUrl=http%3A%2F%2F127.0.0.1%3A43111',
+      url: 'views://renderer/index.html',
       rpc,
     });
     expect(launched).toMatchObject({

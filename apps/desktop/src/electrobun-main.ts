@@ -20,7 +20,8 @@ type LaunchElectrobunAppDependencies = {
 };
 
 function createWindowUrl(engineBaseUrl: string) {
-  return `views://renderer/index.html?engineBaseUrl=${encodeURIComponent(engineBaseUrl)}`;
+  void engineBaseUrl;
+  return 'views://renderer/index.html';
 }
 
 export async function launchElectrobunApp(dependencies: LaunchElectrobunAppDependencies) {
@@ -40,7 +41,12 @@ function createWindowOptions(configRpcHandlers: ConfigRpcHandlers, BrowserView: 
   return {
     title: '日记络络',
     url: createWindowUrl(engineBaseUrl),
-    rpc: createElectrobunMainConfigRpc(BrowserView, configRpcHandlers),
+    rpc: createElectrobunMainConfigRpc(BrowserView, {
+      ...configRpcHandlers,
+      loadRendererRuntime() {
+        return { engineBaseUrl };
+      },
+    }),
   };
 }
 
