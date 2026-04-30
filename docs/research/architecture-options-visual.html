@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>架构选项对比</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0f1220;
+      --panel: #171b2e;
+      --panel-2: #1d2340;
+      --text: #eef2ff;
+      --muted: #aab3d1;
+      --good: #4ade80;
+      --warn: #fbbf24;
+      --bad: #f87171;
+      --accent: #7c9cff;
+      --border: #2b335f;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+      background: linear-gradient(180deg, #0b0e1a 0%, var(--bg) 100%);
+      color: var(--text);
+    }
+    .wrap {
+      max-width: 1380px;
+      margin: 0 auto;
+      padding: 32px;
+    }
+    h1 {
+      margin: 0 0 10px;
+      font-size: 30px;
+    }
+    .sub {
+      color: var(--muted);
+      margin-bottom: 28px;
+      font-size: 15px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 20px;
+    }
+    .card {
+      background: rgba(23, 27, 46, 0.9);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 20px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+    }
+    .title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    .title h2 {
+      margin: 0;
+      font-size: 20px;
+    }
+    .tag {
+      border-radius: 999px;
+      padding: 5px 10px;
+      font-size: 12px;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      background: var(--panel-2);
+      white-space: nowrap;
+    }
+    .tag.good { color: #d1fae5; border-color: #166534; background: rgba(22, 101, 52, 0.25); }
+    .tag.warn { color: #fef3c7; border-color: #854d0e; background: rgba(133, 77, 14, 0.25); }
+    .diagram {
+      background: #101528;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+      margin-bottom: 16px;
+    }
+    .box {
+      border: 1px solid var(--border);
+      background: linear-gradient(180deg, #1a2040, #151a31);
+      border-radius: 12px;
+      padding: 10px 12px;
+      text-align: center;
+      font-size: 14px;
+      margin: 8px 0;
+    }
+    .arrow {
+      text-align: center;
+      color: var(--accent);
+      font-size: 20px;
+      line-height: 1;
+    }
+    .list-title {
+      margin: 14px 0 8px;
+      font-size: 13px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    ul {
+      margin: 0;
+      padding-left: 18px;
+      color: var(--text);
+    }
+    li { margin: 6px 0; }
+    .good { color: var(--good); }
+    .warn-text { color: var(--warn); }
+    .bad { color: var(--bad); }
+    .footer {
+      margin-top: 28px;
+      padding: 18px 20px;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: rgba(20, 24, 42, 0.9);
+      display: grid;
+      gap: 8px;
+    }
+    .footer strong { color: var(--accent); }
+    @media (max-width: 1100px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>独立宿主架构对比</h1>
+    <div class="sub">目标：先做“日记络络”单作品独立桌面版，但内部架构保留未来多作品扩展空间。</div>
+
+    <div class="grid">
+      <section class="card">
+        <div class="title">
+          <h2>方案 A</h2>
+          <span class="tag warn">短期省事，长期难维护</span>
+        </div>
+        <div class="diagram">
+          <div class="box">ST 原前端壳</div>
+          <div class="arrow">↓</div>
+          <div class="box">往里硬塞 启动/存档/log/地图</div>
+          <div class="arrow">↓</div>
+          <div class="box">JS-Slash-Runner + lolocard</div>
+        </div>
+        <div class="list-title">优点</div>
+        <ul>
+          <li class="good">现成东西最多</li>
+          <li class="good">最早能看到效果</li>
+        </ul>
+        <div class="list-title">问题</div>
+        <ul>
+          <li class="bad">你想删掉的楼层系统恰好是它的核心</li>
+          <li class="bad">最终会变成“魔改 ST”，不是独立游戏宿主</li>
+          <li class="bad">新流程和旧 DOM 会长期互相拉扯</li>
+        </ul>
+      </section>
+
+      <section class="card">
+        <div class="title">
+          <h2>方案 B</h2>
+          <span class="tag good">推荐</span>
+        </div>
+        <div class="diagram">
+          <div class="box">Electrobun 桌面壳</div>
+          <div class="arrow">↓</div>
+          <div class="box">新游戏前端壳：启动/存档/log/地图/galgame UI</div>
+          <div class="arrow">↓</div>
+          <div class="box">Host Adapter：变量/世界书/消息/事件/slash/资源</div>
+          <div class="arrow">↓</div>
+          <div class="box">Node 引擎进程：复用 ST 能力层</div>
+          <div class="arrow">↓</div>
+          <div class="box">lolocard + JS-Slash-Runner 可复用部分</div>
+        </div>
+        <div class="list-title">优点</div>
+        <ul>
+          <li class="good">最贴合“独立应用”目标</li>
+          <li class="good">大量复用现有 JS/TS 资产</li>
+          <li class="good">可以逐步摆脱楼层系统</li>
+        </ul>
+        <div class="list-title">代价</div>
+        <ul>
+          <li class="warn-text">要自己定义宿主流程和 adapter</li>
+          <li class="warn-text">前期要做一次消息模型重构</li>
+        </ul>
+      </section>
+
+      <section class="card">
+        <div class="title">
+          <h2>方案 C</h2>
+          <span class="tag">最干净，但开发量最大</span>
+        </div>
+        <div class="diagram">
+          <div class="box">Electrobun / Tauri / Wails 壳</div>
+          <div class="arrow">↓</div>
+          <div class="box">全新前端宿主</div>
+          <div class="arrow">↓</div>
+          <div class="box">全新变量/世界书/消息/runtime</div>
+          <div class="arrow">↓</div>
+          <div class="box">只借用 lolocard 素材与 prompt</div>
+        </div>
+        <div class="list-title">优点</div>
+        <ul>
+          <li class="good">最终形态最纯净</li>
+          <li class="good">没有历史包袱</li>
+        </ul>
+        <div class="list-title">问题</div>
+        <ul>
+          <li class="bad">要重做太多已有能力</li>
+          <li class="bad">最容易把项目拖大</li>
+        </ul>
+      </section>
+    </div>
+
+    <div class="footer">
+      <div><strong>推荐方向：</strong>方案 B</div>
+      <div><strong>核心原则：</strong>复用“能力层”，重建“宿主层”。</div>
+      <div><strong>产品结果：</strong>启动后直接进入 galgame 样式宿主，而不是先进入酒馆楼层聊天页。</div>
+    </div>
+  </div>
+</body>
+</html>

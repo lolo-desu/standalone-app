@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>日记络络独立版总体架构</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0b1020;
+      --panel: #151c33;
+      --panel-2: #1d2648;
+      --text: #edf2ff;
+      --muted: #a8b3d9;
+      --accent: #8ca6ff;
+      --accent-2: #67e8f9;
+      --line: #31406f;
+      --green: #4ade80;
+      --yellow: #fbbf24;
+      --pink: #f472b6;
+      --purple: #a78bfa;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+      background: radial-gradient(circle at top, #131a33 0%, var(--bg) 45%);
+      color: var(--text);
+    }
+    .wrap {
+      max-width: 1450px;
+      margin: 0 auto;
+      padding: 28px;
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 30px;
+    }
+    .sub {
+      color: var(--muted);
+      margin-bottom: 24px;
+      font-size: 15px;
+    }
+    .section {
+      background: rgba(21, 28, 51, 0.92);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 20px;
+      margin-bottom: 22px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.22);
+    }
+    .section h2 {
+      margin: 0 0 14px;
+      font-size: 20px;
+    }
+    .stack {
+      display: grid;
+      gap: 12px;
+    }
+    .layer {
+      display: grid;
+      grid-template-columns: 260px 1fr;
+      gap: 16px;
+      align-items: stretch;
+      background: #10162c;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 14px;
+    }
+    .label {
+      border-radius: 12px;
+      padding: 14px;
+      font-weight: 700;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+    .l1 { background: rgba(140,166,255,.16); border: 1px solid rgba(140,166,255,.45); }
+    .l2 { background: rgba(103,232,249,.14); border: 1px solid rgba(103,232,249,.4); }
+    .l3 { background: rgba(167,139,250,.14); border: 1px solid rgba(167,139,250,.4); }
+    .l4 { background: rgba(74,222,128,.14); border: 1px solid rgba(74,222,128,.4); }
+    .l5 { background: rgba(244,114,182,.14); border: 1px solid rgba(244,114,182,.4); }
+    .content {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .chip {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 10px 12px;
+      background: linear-gradient(180deg, #1b2342, #141b33);
+      font-size: 13px;
+      color: var(--text);
+      min-height: 58px;
+    }
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 10px;
+      align-items: stretch;
+    }
+    .step {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 12px;
+      background: linear-gradient(180deg, #1b2342, #141b33);
+      min-height: 124px;
+    }
+    .num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 999px;
+      background: var(--accent);
+      color: #0b1020;
+      font-weight: 800;
+      margin-bottom: 10px;
+    }
+    .title {
+      font-weight: 700;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+    .step p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+    .legend {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .legend-item {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px;
+      background: #10162c;
+      font-size: 13px;
+    }
+    .legend-item strong { display: block; margin-bottom: 6px; }
+    @media (max-width: 1200px) {
+      .content, .flow, .legend { grid-template-columns: 1fr; }
+      .layer { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>日记络络独立版总体架构</h1>
+    <div class="sub">方向：Electrobun 桌面壳 + 新宿主前端 + Host Adapter + Node 引擎进程 + lolocard/JS-Slash-Runner 内容与运行时复用。</div>
+
+    <section class="section">
+      <h2>分层结构</h2>
+      <div class="stack">
+        <div class="layer">
+          <div class="label l1">1. Desktop Shell</div>
+          <div class="content">
+            <div class="chip">Electrobun 窗口与打包</div>
+            <div class="chip">本地存档目录 / 配置目录</div>
+            <div class="chip">启动、退出、窗口控制</div>
+          </div>
+        </div>
+
+        <div class="layer">
+          <div class="label l2">2. Game Frontend Shell</div>
+          <div class="content">
+            <div class="chip">主菜单：继续 / 新游戏 / 加载 / 设置 / 退出</div>
+            <div class="chip">常驻 galgame 主界面，不再以酒馆楼层为主</div>
+            <div class="chip">底部命令：Q.save / Q.load / save / load / log / setting / hide</div>
+          </div>
+        </div>
+
+        <div class="layer">
+          <div class="label l3">3. Host Adapter</div>
+          <div class="content">
+            <div class="chip">变量 / 世界书 / 事件 / 资源路径接口</div>
+            <div class="chip">消息时间线 / log / save-load / investigation context</div>
+            <div class="chip">双模型路由：故事模型 + 逻辑模型</div>
+          </div>
+        </div>
+
+        <div class="layer">
+          <div class="label l4">4. Engine Process</div>
+          <div class="content">
+            <div class="chip">Node 子进程承载 SillyTavern 能力层</div>
+            <div class="chip">provider 接入 / prompt 转换 / 角色卡处理</div>
+            <div class="chip">不复用 ST 原宿主 UI，只复用能力</div>
+          </div>
+        </div>
+
+        <div class="layer">
+          <div class="label l5">5. Content Runtime</div>
+          <div class="content">
+            <div class="chip">lolocard 的日记络络内容、世界书、第一条消息</div>
+            <div class="chip">JS-Slash-Runner 的可移植 runtime 与工具函数</div>
+            <div class="chip">素材、galgame 样式、选择框和地图玩法</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>一次游戏操作的数据流</h2>
+      <div class="flow">
+        <div class="step">
+          <div class="num">1</div>
+          <div class="title">玩家操作</div>
+          <p>点击继续、空格推进，或打开互动 / 移动 / 调查。</p>
+        </div>
+        <div class="step">
+          <div class="num">2</div>
+          <div class="title">宿主前端解释动作</div>
+          <p>把 UI 操作转成统一 Action，例如推进剧情、提交对话、切换地点、临时调查。</p>
+        </div>
+        <div class="step">
+          <div class="num">3</div>
+          <div class="title">Adapter 组装上下文</div>
+          <p>读取当前变量、世界书、地图位置、短期调查上下文、log 和存档状态。</p>
+        </div>
+        <div class="step">
+          <div class="num">4</div>
+          <div class="title">双模型执行</div>
+          <p>逻辑模型先更新变量和状态，故事模型再输出最终文本与界面标签。</p>
+        </div>
+        <div class="step">
+          <div class="num">5</div>
+          <div class="title">结果结构化</div>
+          <p>生成场景更新、角色表现、可见文本、选项、地图变化、log 项和存档快照差异。</p>
+        </div>
+        <div class="step">
+          <div class="num">6</div>
+          <div class="title">前端持续呈现</div>
+          <p>界面始终停留在 galgame 样式，不再把 galgame 塞进某个聊天楼层。</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>产品内要替换掉的旧模型</h2>
+      <div class="legend">
+        <div class="legend-item">
+          <strong>旧：酒馆楼层历史</strong>
+          新：剧情时间线 + 独立 log 系统。
+        </div>
+        <div class="legend-item">
+          <strong>旧：AI 回复某条楼层才显示 galgame</strong>
+          新：游戏界面始终就是 galgame 宿主。
+        </div>
+        <div class="legend-item">
+          <strong>旧：消息即全部历史</strong>
+          新：正式 log、短期调查上下文、场景状态分离存储。
+        </div>
+        <div class="legend-item">
+          <strong>旧：单一模型心智</strong>
+          新：故事模型负责叙事，逻辑模型负责变量与判定。
+        </div>
+      </div>
+    </section>
+  </div>
+</body>
+</html>
