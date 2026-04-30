@@ -4,22 +4,7 @@ const mount = vi.fn();
 const createApp = vi.fn(() => ({
   mount,
 }));
-const bootstrapElectrobunRenderer = vi.fn().mockResolvedValue({
-  App: 'AppStub',
-  configStore: {
-    credentialProfiles: [],
-    appSettings: {
-      defaultProviderId: null,
-      defaultCredentialProfileId: null,
-      defaultStoryModel: null,
-      defaultLogicModel: null,
-      useDualModel: false,
-    },
-  },
-  sessionStore: {
-    currentSession: null,
-  },
-});
+const bootstrapElectrobunRenderer = vi.fn();
 
 vi.mock('vue', () => ({
   createApp,
@@ -37,9 +22,33 @@ describe('renderer index', () => {
   afterEach(() => {
     vi.resetModules();
     vi.clearAllMocks();
+    vi.unstubAllGlobals();
   });
 
   it('bootstraps and mounts the Vue app into #app', async () => {
+    const appRoot = { innerHTML: '' };
+
+    bootstrapElectrobunRenderer.mockResolvedValue({
+      App: 'AppStub',
+      configStore: {
+        credentialProfiles: [],
+        appSettings: {
+          defaultProviderId: null,
+          defaultCredentialProfileId: null,
+          defaultStoryModel: null,
+          defaultLogicModel: null,
+          useDualModel: false,
+        },
+      },
+      sessionStore: {
+        currentSession: null,
+      },
+    });
+    vi.stubGlobal('document', {
+      querySelector: vi.fn().mockReturnValue(appRoot),
+    });
+    vi.stubGlobal('HTMLElement', Object);
+
     await import('./index');
     await Promise.resolve();
 
@@ -48,5 +57,24 @@ describe('renderer index', () => {
     });
     expect(createApp).toHaveBeenCalledWith('AppStub');
     expect(mount).toHaveBeenCalledWith('#app');
+  });
+
+  it('renders a readable error screen when bootstrap fails', async () => {
+    const appRoot = { innerHTML: '' };
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    bootstrapElectrobunRenderer.mockRejectedValue(new Error('boom <fail>'));
+    vi.stubGlobal('document', {
+      querySelector: vi.fn().mockReturnValue(appRoot),
+    });
+    vi.stubGlobal('HTMLElement', Object);
+
+    await import('./index');
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(consoleError).toHaveBeenCalledWith('Renderer bootstrap failed', expect.any(Error));
+    expect(appRoot.innerHTML).toContain('渲染器启动失败');
+    expect(appRoot.innerHTML).toContain('boom &lt;fail&gt;');
   });
 });
