@@ -1,5 +1,6 @@
 import { handleHealthRequest } from './routes/health';
 import { registerSessionRoutes } from './routes/session';
+import { createSessionSnapshotRepository } from './services/session-service';
 
 type RouteHandler = (
   req: { body: unknown },
@@ -8,6 +9,7 @@ type RouteHandler = (
 
 type EngineRequestHandlerDependencies = {
   registerSessionRoutes?: typeof registerSessionRoutes;
+  savesDir?: string;
 };
 
 export function createEngineRequestHandler(dependencies: EngineRequestHandlerDependencies = {}) {
@@ -17,7 +19,11 @@ export function createEngineRequestHandler(dependencies: EngineRequestHandlerDep
     post(path, handler) {
       sessionRoutes.set(path, handler);
     },
-  });
+  }, dependencies.savesDir
+    ? {
+        snapshotRepository: createSessionSnapshotRepository({ savesDir: dependencies.savesDir }),
+      }
+    : undefined);
 
   return async function handleEngineRequest(request: Request): Promise<Response> {
     const pathname = new URL(request.url).pathname;
@@ -86,4 +92,6 @@ export function createEngineRequestHandler(dependencies: EngineRequestHandlerDep
   };
 }
 
-export const handleEngineRequest = createEngineRequestHandler();
+export const handleEngineRequest = createEngineRequestHandler({
+  savesDir: process.env.RIJI_LUOLUO_SAVES_DIR,
+});

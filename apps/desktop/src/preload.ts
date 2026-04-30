@@ -1,5 +1,7 @@
-export function createPreloadBridge() {
+export function createPreloadState() {
   return {
     ready: true,
   };
 }
+
+export const preloadState = createPreloadState();

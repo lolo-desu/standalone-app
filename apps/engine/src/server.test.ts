@@ -1,3 +1,7 @@
+import { mkdtempSync, rmSync } from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+
 import { describe, expect, it } from 'vitest';
 
 import { createEngineRequestHandler, handleEngineRequest } from './server';
@@ -298,5 +302,51 @@ describe('handleEngineRequest', () => {
 
     expect(response.status).toBe(405);
     await expect(response.json()).resolves.toEqual({ error: 'Method not allowed' });
+  });
+
+  it('uses an explicit savesDir across separately created handlers', async () => {
+    const savesDir = mkdtempSync(path.join(os.tmpdir(), 'riji-luoluo-engine-saves-'));
+
+    try {
+      const firstHandler = createEngineRequestHandler({ savesDir } as never);
+
+      const saveResponse = await firstHandler(
+        new Request('http://engine.test/session/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            session: createTestSession(),
+            kind: 'quick',
+            slotId: null,
+          }),
+        }),
+      );
+
+      expect(saveResponse.status).toBe(200);
+
+      const secondHandler = createEngineRequestHandler({ savesDir } as never);
+      const loadResponse = await secondHandler(
+        new Request('http://engine.test/session/load', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            kind: 'quick',
+            slotId: null,
+          }),
+        }),
+      );
+
+      expect(loadResponse.status).toBe(200);
+      await expect(loadResponse.json()).resolves.toMatchObject({
+        sessionMeta: {
+          id: 'sess_server',
+        },
+        saveMeta: {
+          quickSlotId: 'save_quick',
+        },
+      });
+    } finally {
+      rmSync(savesDir, { force: true, recursive: true });
+    }
   });
 });

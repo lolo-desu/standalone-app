@@ -1,2 +1,5 @@
 node_modules/
 .superpowers/
+.worktrees/
+apps/desktop/build/
+*.tgz

@@ -1,10 +1,8 @@
-import { getAppPaths } from './paths';
+import { BrowserView, BrowserWindow } from 'electrobun';
 
-async function bootstrap() {
-  const paths = getAppPaths(process.env.HOME || process.cwd());
+import { launchElectrobunApp } from './electrobun-main';
 
-  console.log('App paths', paths);
-  // Create engine child process and main window here in the real implementation.
-}
-
-bootstrap();
+void launchElectrobunApp({
+  BrowserView,
+  BrowserWindow,
+});

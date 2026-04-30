@@ -1,5 +1,8 @@
 {
   "name": "@lologames/desktop",
   "private": true,
-  "type": "module"
+  "type": "module",
+  "dependencies": {
+    "electrobun": "^1.16.0"
+  }
 }

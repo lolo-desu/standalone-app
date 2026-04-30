@@ -1,3 +1,7 @@
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+
 import { defaultScene } from '@standalone/content-riji';
 import {
   SessionSchema,
@@ -31,6 +35,18 @@ type SessionAction =
     };
 
 type SaveSnapshotKind = 'quick' | 'auto' | 'manual';
+
+type SessionSnapshotRepositoryOptions = {
+  savesDir?: string;
+};
+
+type SnapshotIndex = {
+  quickSlotId: string | null;
+  autoSlotId: string | null;
+  manualSlotIds: string[];
+};
+
+let testRepositorySequence = 0;
 
 export function createInitialSession(input: CreateInitialSessionInput): Session {
   const now = new Date().toISOString();
@@ -231,12 +247,164 @@ function createSnapshotId(kind: SaveSnapshotKind, slotId: string | null): string
   return `save_${kind}`;
 }
 
-function createSnapshotKey(kind: SaveSnapshotKind, slotId: string | null): string {
-  if (kind === 'manual') {
-    return `manual:${slotId ?? 'manual'}`;
+function createEmptySnapshotIndex(): SnapshotIndex {
+  return {
+    quickSlotId: null,
+    autoSlotId: null,
+    manualSlotIds: [],
+  };
+}
+
+function getDefaultSavesDir() {
+  if (process.env.VITEST) {
+    testRepositorySequence += 1;
+    return path.join(os.tmpdir(), `riji-luoluo-vitest-saves-${process.pid}-${testRepositorySequence}`);
   }
 
-  return `${kind}:default`;
+  return process.env.RIJI_LUOLUO_SAVES_DIR ?? path.join(process.env.HOME ?? process.env.USERPROFILE ?? process.cwd(), 'riji-luoluo', 'saves');
+}
+
+function getSnapshotIndexPath(savesDir: string) {
+  return path.join(savesDir, 'index.json');
+}
+
+function getManualSavesDir(savesDir: string) {
+  return path.join(savesDir, 'manual');
+}
+
+function createManualSnapshotFileName(slotId: string | null) {
+  return `${encodeURIComponent(slotId ?? 'manual')}.json`;
+}
+
+function tryReadJsonFile(filePath: string) {
+  try {
+    return JSON.parse(fs.readFileSync(filePath, 'utf8')) as unknown;
+  } catch {
+    return null;
+  }
+}
+
+function readSnapshotSession(filePath: string) {
+  const parsedSnapshot = tryReadJsonFile(filePath);
+
+  if (!parsedSnapshot) {
+    return null;
+  }
+
+  const snapshotResult = SessionSchema.safeParse(parsedSnapshot);
+
+  if (!snapshotResult.success) {
+    return null;
+  }
+
+  return snapshotResult.data;
+}
+
+function getSnapshotFilePath(savesDir: string, kind: SaveSnapshotKind, slotId: string | null) {
+  if (kind === 'quick') {
+    return path.join(savesDir, 'quick.json');
+  }
+
+  if (kind === 'auto') {
+    return path.join(savesDir, 'auto.json');
+  }
+
+  return path.join(getManualSavesDir(savesDir), createManualSnapshotFileName(slotId));
+}
+
+function ensureSavesDirLayout(savesDir: string) {
+  fs.mkdirSync(getManualSavesDir(savesDir), { recursive: true });
+}
+
+function listManualSnapshotsFromDisk(savesDir: string) {
+  const manualSavesDir = getManualSavesDir(savesDir);
+
+  if (!fs.existsSync(manualSavesDir)) {
+    return [];
+  }
+
+  return fs
+    .readdirSync(manualSavesDir)
+    .filter((fileName) => fileName.endsWith('.json'))
+    .map((fileName) => {
+      const slotIdFilePath = path.join(manualSavesDir, fileName);
+      const session = readSnapshotSession(slotIdFilePath);
+
+      if (!session) {
+        return null;
+      }
+
+      try {
+        return {
+          slotId: decodeURIComponent(fileName.slice(0, -'.json'.length)),
+          session,
+        };
+      } catch {
+        return null;
+      }
+    })
+    .filter((entry): entry is { slotId: string; session: Session } => entry !== null)
+    .sort((left, right) => {
+      const updatedAtCompare = left.session.sessionMeta.updatedAt.localeCompare(right.session.sessionMeta.updatedAt);
+
+      if (updatedAtCompare !== 0) {
+        return updatedAtCompare;
+      }
+
+      return left.slotId.localeCompare(right.slotId);
+    });
+}
+
+function readSnapshotIndex(savesDir: string): SnapshotIndex {
+  const indexPath = getSnapshotIndexPath(savesDir);
+  const parsed = (fs.existsSync(indexPath) ? tryReadJsonFile(indexPath) : null) as Partial<SnapshotIndex> | null;
+  const manualSnapshots = listManualSnapshotsFromDisk(savesDir);
+  const manualSlotIdsFromDisk = manualSnapshots.map(({ slotId }) => slotId);
+  const indexedManualSlotIds = Array.isArray(parsed?.manualSlotIds)
+    ? parsed.manualSlotIds.filter((slotId): slotId is string => typeof slotId === 'string')
+    : [];
+  const recoveredManualSlotIds = manualSnapshots.reduce<string[]>((bestOrder, { session }) => {
+    const candidateOrder = session.saveMeta.manualSlotIds.filter((slotId) => manualSlotIdsFromDisk.includes(slotId));
+
+    if (candidateOrder.length >= bestOrder.length) {
+      return candidateOrder;
+    }
+
+    return bestOrder;
+  }, []);
+  const preferredManualSlotIds = indexedManualSlotIds.length > 0 ? indexedManualSlotIds : recoveredManualSlotIds;
+
+  return {
+    quickSlotId: readSnapshotSession(getSnapshotFilePath(savesDir, 'quick', null)) ? 'save_quick' : null,
+    autoSlotId: readSnapshotSession(getSnapshotFilePath(savesDir, 'auto', null)) ? 'save_auto' : null,
+    manualSlotIds: [
+      ...preferredManualSlotIds.filter((slotId) => manualSlotIdsFromDisk.includes(slotId)),
+      ...manualSlotIdsFromDisk.filter((slotId) => !preferredManualSlotIds.includes(slotId)),
+    ],
+  };
+}
+
+function writeJsonFileAtomically(filePath: string, value: unknown) {
+  const tempFilePath = `${filePath}.${process.pid}.tmp`;
+
+  fs.writeFileSync(tempFilePath, JSON.stringify(value, null, 2));
+  fs.renameSync(tempFilePath, filePath);
+}
+
+function writeSnapshotIndex(savesDir: string, index: SnapshotIndex) {
+  writeJsonFileAtomically(getSnapshotIndexPath(savesDir), index);
+}
+
+function mergeSaveMeta(session: Session, index: SnapshotIndex): Session {
+  return SessionSchema.parse({
+    ...session,
+    saveMeta: {
+      ...session.saveMeta,
+      quickSlotId: index.quickSlotId,
+      autoSlotId: index.autoSlotId,
+      manualSlotIds: index.manualSlotIds,
+    },
+  });
 }
 
 function createSavedSessionSnapshot(
@@ -259,61 +427,47 @@ function createSavedSessionSnapshot(
   });
 }
 
-export function createSessionSnapshotRepository() {
-  const snapshots = new Map<string, Session>();
-  const manualSlotIds = new Set<string>();
-  let quickSlotId: string | null = null;
-  let autoSlotId: string | null = null;
+export function createSessionSnapshotRepository(options: SessionSnapshotRepositoryOptions = {}) {
+  const savesDir = options.savesDir ?? getDefaultSavesDir();
 
-  function listManualSlotIds() {
-    return [...manualSlotIds];
-  }
-
-  function mergeSaveMeta(session: Session): Session {
-    return SessionSchema.parse({
-      ...session,
-      saveMeta: {
-        ...session.saveMeta,
-        quickSlotId,
-        autoSlotId,
-        manualSlotIds: listManualSlotIds(),
-      },
-    });
-  }
+  ensureSavesDirLayout(savesDir);
 
   return {
     save(session: Session, kind: SaveSnapshotKind, slotId: string | null) {
-      if (kind === 'manual' && slotId) {
-        manualSlotIds.add(slotId);
-      }
-
       const id = createSnapshotId(kind, slotId);
+      const currentIndex = readSnapshotIndex(savesDir);
+      const nextIndex: SnapshotIndex = {
+        quickSlotId: kind === 'quick' ? id : currentIndex.quickSlotId,
+        autoSlotId: kind === 'auto' ? id : currentIndex.autoSlotId,
+        manualSlotIds:
+          kind === 'manual' && slotId && !currentIndex.manualSlotIds.includes(slotId)
+            ? [...currentIndex.manualSlotIds, slotId]
+            : currentIndex.manualSlotIds,
+      };
+      const savedSession = createSavedSessionSnapshot(session, kind, id, nextIndex.manualSlotIds);
 
-      if (kind === 'quick') {
-        quickSlotId = id;
-      }
-
-      if (kind === 'auto') {
-        autoSlotId = id;
-      }
-
-      snapshots.set(
-        createSnapshotKey(kind, slotId),
-        createSavedSessionSnapshot(session, kind, id, listManualSlotIds()),
-      );
+      writeJsonFileAtomically(getSnapshotFilePath(savesDir, kind, slotId), savedSession);
+      writeSnapshotIndex(savesDir, nextIndex);
 
       return { id };
     },
     load(kind: SaveSnapshotKind, slotId: string | null) {
-      const snapshot = snapshots.get(createSnapshotKey(kind, slotId));
+      const snapshotFilePath = getSnapshotFilePath(savesDir, kind, slotId);
+
+      if (!fs.existsSync(snapshotFilePath)) {
+        return null;
+      }
+
+      const index = readSnapshotIndex(savesDir);
+      const snapshot = readSnapshotSession(snapshotFilePath);
 
       if (!snapshot) {
         return null;
       }
 
-      return mergeSaveMeta(snapshot);
+      return mergeSaveMeta(snapshot, index);
     },
   };
 }
 
-export type { CreateInitialSessionInput, SaveSnapshotKind, SessionAction };
+export type { CreateInitialSessionInput, SaveSnapshotKind, SessionAction, SessionSnapshotRepositoryOptions };
