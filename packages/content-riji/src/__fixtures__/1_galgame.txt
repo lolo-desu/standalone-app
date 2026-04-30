@@ -1,0 +1,10 @@
+<galgame>
+```yaml
+- speaker: 旁白
+  speech: 窗外的风吹过教学楼。
+- speaker: 络络
+  background: 教室/白天.jpg
+  tachie: 水手服/稍微脸红.png
+  speech: 打……打扰了。那个，可以找一下……<user>同学吗？
+```
+</galgame>

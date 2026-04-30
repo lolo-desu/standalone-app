@@ -4,6 +4,7 @@ const FIRST_GALGAME_SCENE_PATH = new URL(
   '../../../../lolocard/src/日记络络/第一条消息/1_galgame.txt',
   import.meta.url
 );
+const BUNDLED_FIRST_GALGAME_SCENE_PATH = new URL('./__fixtures__/1_galgame.txt', import.meta.url);
 
 type GalgameItem = Record<string, string>;
 
@@ -84,8 +85,20 @@ function parseGalgameItems(script: string): GalgameItem[] {
   return items;
 }
 
+function readFirstGalgameScript() {
+  for (const filePath of [FIRST_GALGAME_SCENE_PATH, BUNDLED_FIRST_GALGAME_SCENE_PATH]) {
+    try {
+      return readFileSync(filePath, 'utf8');
+    } catch {
+      continue;
+    }
+  }
+
+  throw new Error('Unable to read the opening galgame script from either the external checkout or bundled fixture');
+}
+
 export function getFirstMessage() {
-  const galgameScript = readFileSync(FIRST_GALGAME_SCENE_PATH, 'utf8');
+  const galgameScript = readFirstGalgameScript();
   const firstDialog = parseGalgameItems(galgameScript).find(
     (item) => item.speaker === '络络' && typeof item.speech === 'string'
   );

@@ -31,7 +31,7 @@ describe('desktop bootstrap', () => {
     expect(launchInput).toMatchObject({
       env: {
         NODE_ENV: 'test',
-        RIJI_LUOLUO_SAVES_DIR: '/tmp/lologames-home/riji-luoluo/saves',
+        RIJI_LUOLUO_SAVES_DIR: path.join('/tmp/lologames-home', 'riji-luoluo', 'saves'),
       },
     });
     expect(runtime.engineBaseUrl).toBe('http://127.0.0.1:43111');

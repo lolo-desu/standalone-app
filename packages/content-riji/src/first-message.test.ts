@@ -32,6 +32,26 @@ describe('first-message', () => {
     });
   });
 
+  it('falls back to bundled galgame content when the external source file is missing', async () => {
+    const fixturePath = new URL('./__fixtures__/1_galgame.txt', import.meta.url);
+    const readFileSync = vi.fn((filePath: URL | string) => {
+      if (`${filePath}` === `${fixturePath}`) {
+        return '<galgame>\n```yaml\n- speaker: 络络\n  speech: 打……打扰了。那个，可以找一下……<user>同学吗？\n```\n</galgame>';
+      }
+
+      throw new Error('ENOENT: external content checkout is unavailable');
+    });
+
+    vi.doMock('node:fs', () => ({ readFileSync }));
+
+    const { getFirstMessage } = await import('./first-message');
+
+    expect(getFirstMessage()).toEqual({
+      speaker: '络络',
+      text: '打……打扰了。那个，可以找一下……<user>同学吗？',
+    });
+  });
+
   it('loads the first real luoluo dialog from the galgame opening script', async () => {
     const { getFirstMessage } = await import('./first-message');
     const msg = getFirstMessage();
