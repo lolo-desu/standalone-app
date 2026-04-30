@@ -1,5 +1,5 @@
 import { createElectrobunConfigRpcClient, createElectrobunRendererConfigRpc, loadRendererRuntime, type WebviewRpcFactory } from '../electrobun-rpc';
-import { bootstrapRenderer as defaultBootstrapRenderer } from './bootstrap';
+import { bootstrapRenderer as defaultBootstrapRenderer } from './main';
 
 type ElectroviewInstance = {
   rpc: {
