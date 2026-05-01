@@ -9,6 +9,7 @@ import {
   type SaveSnapshotKind,
   type SessionAction,
 } from '../services/session-service';
+import { orchestrateFormalAction } from '../services/generation-orchestrator';
 
 type AppLike = {
   post: (
@@ -42,6 +43,7 @@ const SaveSnapshotKeySchema = z.discriminatedUnion('kind', [
 type RegisterSessionRouteDependencies = {
   createInitialSession?: typeof createInitialSession;
   applyAction?: typeof applyAction;
+  orchestrateFormalAction?: typeof orchestrateFormalAction;
   snapshotRepository?: ReturnType<typeof createSessionSnapshotRepository>;
 };
 
@@ -52,6 +54,7 @@ function getInvalidPayloadResponse(path: string) {
 export async function registerSessionRoutes(app: AppLike, dependencies: RegisterSessionRouteDependencies = {}) {
   const makeInitialSession = dependencies.createInitialSession ?? createInitialSession;
   const applySessionAction = dependencies.applyAction ?? applyAction;
+  const orchestrateSessionAction = dependencies.orchestrateFormalAction ?? orchestrateFormalAction;
   const snapshotRepository = dependencies.snapshotRepository ?? createSessionSnapshotRepository();
 
   app.post('/session/new', async (req, res) => {
@@ -99,7 +102,10 @@ export async function registerSessionRoutes(app: AppLike, dependencies: Register
       throw new Error('Invalid session/action payload');
     }
 
-    const updatedSession = await applySessionAction(session, body.action);
+    const updatedSession =
+      body.action.kind === 'investigate'
+        ? await applySessionAction(session, body.action)
+        : await orchestrateSessionAction(session, body.action);
 
     if (body.action.kind === 'investigate') {
       res.json(updatedSession);

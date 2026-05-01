@@ -65,6 +65,29 @@ export type PromptSections = {
   anchorAfter: string;
 };
 
+export type LorebookInsertionPosition = 'before_history' | 'after_history';
+
+export type LorebookEntry = {
+  id: string;
+  text: string;
+  enabled: boolean;
+  keywords: string[];
+  secondaryKeywords: string[];
+  matchMode: 'any' | 'all';
+  scanDepth: number | null;
+  insertionPosition: LorebookInsertionPosition;
+  order: number;
+  comment: string;
+  rawSource?: unknown;
+};
+
+export type LorebookAsset = {
+  kind: 'lorebook';
+  name: string;
+  entries: LorebookEntry[];
+  rawSource?: unknown;
+};
+
 export type PromptRuntimeContext = {
   session: Session;
   contextPreset: ContextPreset;

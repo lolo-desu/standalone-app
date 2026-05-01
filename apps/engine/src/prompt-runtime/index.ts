@@ -5,3 +5,5 @@ export * from './context';
 export * from './story-string';
 export * from './assembly';
 export * from './provider-request';
+export * from './lorebook';
+export * from './lorebook-match';

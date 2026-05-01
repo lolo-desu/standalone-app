@@ -6,8 +6,10 @@ function getStoryInsertionIndex(history: PromptMessage[], depth: number): number
 }
 
 function buildStoryRenderData(context: PromptRuntimeContext): Record<string, unknown> {
+  const { wiBefore: _wiBefore, wiAfter: _wiAfter, ...storySections } = context.sections;
+
   return {
-    ...context.sections,
+    ...storySections,
     playerName: context.playerName,
     characterName: context.characterName,
     statData: context.statData,
@@ -45,6 +47,26 @@ function withStoryMessage(
     : [...history.slice(0, insertionIndex), storyMessage, ...history.slice(insertionIndex)];
 }
 
+function withWorldInfoMessages(history: PromptMessage[], context: PromptRuntimeContext): PromptMessage[] {
+  const messages = [...history];
+
+  if (context.sections.wiBefore.length > 0) {
+    messages.unshift({
+      role: 'system',
+      content: context.sections.wiBefore,
+    });
+  }
+
+  if (context.sections.wiAfter.length > 0) {
+    messages.push({
+      role: 'system',
+      content: context.sections.wiAfter,
+    });
+  }
+
+  return messages;
+}
+
 function assertSupportedInstructStoryPlacement(context: PromptRuntimeContext): void {
   if (
     context.contextPreset.storyStringPosition !== 'before_history' ||
@@ -74,9 +96,18 @@ function formatInstructMessage(message: PromptMessage, context: PromptRuntimeCon
   return `${preset.systemSequence}${message.content}${preset.systemSuffix}`;
 }
 
+function formatInstructWorldInfo(text: string, context: PromptRuntimeContext): string {
+  if (text.length === 0 || context.instructPreset === null) {
+    return '';
+  }
+
+  return `${context.instructPreset.systemSequence}${text}${context.instructPreset.systemSuffix}`;
+}
+
 export function assemblePrompt(context: PromptRuntimeContext): AssembledPrompt {
   const systemText = renderSystemText(context);
   const historyWithStory = withStoryMessage(context.chatHistory, systemText, context);
+  const historyWithWorldInfo = withWorldInfoMessages(historyWithStory, context);
 
   if (context.instructPreset !== null) {
     if (systemText !== null) {
@@ -84,7 +115,7 @@ export function assemblePrompt(context: PromptRuntimeContext): AssembledPrompt {
     }
     const preset = context.instructPreset;
     const insertionIndex = getStoryInsertionIndex(context.chatHistory, context.contextPreset.storyStringDepth);
-    const promptText = `${context.chatHistory
+    const promptText = `${formatInstructWorldInfo(context.sections.wiBefore, context)}${context.chatHistory
       .slice(0, insertionIndex)
       .map((message) => formatInstructMessage(message, context))
       .join('')}${
@@ -94,7 +125,7 @@ export function assemblePrompt(context: PromptRuntimeContext): AssembledPrompt {
     }${context.chatHistory
       .slice(insertionIndex)
       .map((message) => formatInstructMessage(message, context))
-      .join('')}`;
+      .join('')}${formatInstructWorldInfo(context.sections.wiAfter, context)}`;
 
     return {
       mode: 'instruct',
@@ -112,7 +143,7 @@ export function assemblePrompt(context: PromptRuntimeContext): AssembledPrompt {
     mode: 'chat',
     systemText,
     promptText: null,
-    messages: historyWithStory,
+    messages: historyWithWorldInfo,
     debug: {
       historyCount: context.chatHistory.length,
       usedInstructPreset: false,

@@ -62,4 +62,52 @@ describe('buildPromptRuntimeContext', () => {
       },
     ]);
   });
+
+  it('populates wiBefore and wiAfter from matched lorebook entries', () => {
+    const session = createInitialSession({
+      providerId: 'openai-compatible',
+      credentialProfileId: 'default',
+      storyModel: 'story-001',
+      logicModel: 'logic-001',
+      useDualModel: true,
+    });
+
+    session.sceneState.text = '夜晚的学校很安静，络络站在走廊上。';
+
+    const context = buildPromptRuntimeContext(session, {
+      lorebook: {
+        kind: 'lorebook',
+        name: 'Diary Lorebook',
+        entries: [
+          {
+            id: 'school',
+            text: '学校在夜晚会显得更空旷。',
+            enabled: true,
+            keywords: ['学校'],
+            secondaryKeywords: [],
+            matchMode: 'any',
+            scanDepth: null,
+            insertionPosition: 'before_history',
+            order: 1,
+            comment: '',
+          },
+          {
+            id: 'luoluo',
+            text: '络络会放轻脚步。',
+            enabled: true,
+            keywords: ['络络'],
+            secondaryKeywords: [],
+            matchMode: 'any',
+            scanDepth: null,
+            insertionPosition: 'after_history',
+            order: 2,
+            comment: '',
+          },
+        ],
+      },
+    });
+
+    expect(context.sections.wiBefore).toBe('学校在夜晚会显得更空旷。');
+    expect(context.sections.wiAfter).toBe('络络会放轻脚步。');
+  });
 });
