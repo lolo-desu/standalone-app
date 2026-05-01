@@ -27,6 +27,9 @@ describe('renderer index', () => {
 
   it('bootstraps and mounts the Vue app into #app', async () => {
     const appRoot = { innerHTML: '' };
+    const sessionStore = {
+      currentSession: null,
+    };
 
     bootstrapElectrobunRenderer.mockResolvedValue({
       App: 'AppStub',
@@ -40,9 +43,7 @@ describe('renderer index', () => {
           useDualModel: false,
         },
       },
-      sessionStore: {
-        currentSession: null,
-      },
+      sessionStore,
     });
     vi.stubGlobal('document', {
       querySelector: vi.fn().mockReturnValue(appRoot),
@@ -55,7 +56,7 @@ describe('renderer index', () => {
     expect(bootstrapElectrobunRenderer).toHaveBeenCalledWith({
       Electroview: 'ElectroviewStub',
     });
-    expect(createApp).toHaveBeenCalledWith('AppStub');
+    expect(createApp).toHaveBeenCalledWith('AppStub', { sessionStore });
     expect(mount).toHaveBeenCalledWith('#app');
   });
 

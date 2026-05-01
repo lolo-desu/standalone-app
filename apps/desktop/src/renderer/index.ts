@@ -25,8 +25,8 @@ function escapeHtml(value: string) {
 void bootstrapElectrobunRenderer({
   Electroview,
 })
-  .then(({ App }) => {
-    createApp(App).mount('#app');
+  .then(({ App, sessionStore }) => {
+    createApp(App, { sessionStore }).mount('#app');
   })
   .catch((error) => {
     console.error('Renderer bootstrap failed', error);

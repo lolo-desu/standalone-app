@@ -1,3 +1,4 @@
+import { nextTick, watch } from 'vue';
 import { describe, expect, it, vi } from 'vitest';
 
 import { createSessionStore } from './session';
@@ -54,6 +55,40 @@ describe('createSessionStore', () => {
 
     expect(api.createNewSession).toHaveBeenCalledOnce();
     expect(store.currentSession?.sceneState.text).toBe('第一条消息');
+  });
+
+  it('reacts when startNewGame replaces currentSession for renderer consumers', async () => {
+    const api = createApi({
+      createNewSession: vi.fn().mockResolvedValue(
+        createTestSession({
+          sceneState: { mode: 'dialog', text: 'reactive update', speaker: '络络' },
+        }),
+      ),
+    });
+    const store = createSessionStore(api);
+    const observedTexts: Array<string | null> = [];
+    const stop = watch(
+      () => store.currentSession?.sceneState.text ?? null,
+      (text) => {
+        observedTexts.push(text);
+      },
+      { immediate: true },
+    );
+
+    expect(observedTexts).toEqual([null]);
+
+    await store.startNewGame({
+      providerId: 'test',
+      credentialProfileId: 'test',
+      storyModel: 'test',
+      logicModel: null,
+      useDualModel: false,
+    });
+    await nextTick();
+
+    expect(observedTexts).toEqual([null, 'reactive update']);
+
+    stop();
   });
 
   it('preserves formal log and investigation-only state from API sessions', async () => {

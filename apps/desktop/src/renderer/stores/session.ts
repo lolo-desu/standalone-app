@@ -1,4 +1,5 @@
 import { parseSession, type Session } from '@lologames/shared';
+import { reactive } from 'vue';
 
 type NewGameInput = {
   providerId: string;
@@ -15,35 +16,35 @@ interface ApiInterface {
 }
 
 export function createSessionStore(api: ApiInterface) {
-  const state = {
+  const store = reactive({
     currentSession: null as Session | null,
     receiveSession(session: unknown) {
-      state.currentSession = parseSession(session);
+      store.currentSession = parseSession(session);
     },
     async startNewGame(input: NewGameInput) {
-      state.receiveSession(await api.createNewSession(input));
+      store.receiveSession(await api.createNewSession(input));
     },
     async quickSave() {
-      if (!state.currentSession) return;
-      const res = await api.createSaveSnapshot(state.currentSession, 'quick', null);
-      state.currentSession.saveMeta.quickSlotId = res.id;
+      if (!store.currentSession) return;
+      const res = await api.createSaveSnapshot(store.currentSession, 'quick', null);
+      store.currentSession.saveMeta.quickSlotId = res.id;
     },
     async saveToManualSlot(slotId: string) {
-      if (!state.currentSession) return;
-      await api.createSaveSnapshot(state.currentSession, 'manual', slotId);
-      if (!state.currentSession.saveMeta.manualSlotIds.includes(slotId)) {
-        state.currentSession.saveMeta.manualSlotIds.push(slotId);
+      if (!store.currentSession) return;
+      await api.createSaveSnapshot(store.currentSession, 'manual', slotId);
+      if (!store.currentSession.saveMeta.manualSlotIds.includes(slotId)) {
+        store.currentSession.saveMeta.manualSlotIds.push(slotId);
       }
     },
     async quickLoad() {
       const session = await api.loadSaveSnapshot('quick', null);
-      state.receiveSession(session);
+      store.receiveSession(session);
     },
     async loadManualSlot(slotId: string) {
       const session = await api.loadSaveSnapshot('manual', slotId);
-      state.receiveSession(session);
+      store.receiveSession(session);
     }
-  };
+  });
 
-  return state;
+  return store;
 }
