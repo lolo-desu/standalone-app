@@ -18,11 +18,17 @@ type CreateInitialSessionInput = {
   storyModel: string;
   logicModel: string | null;
   useDualModel: boolean;
-  playerProfile: {
+  playerProfile?: {
     name: string;
     gender: string;
     persona: string;
   };
+};
+
+const EMPTY_PLAYER_PROFILE = {
+  name: '',
+  gender: '',
+  persona: '',
 };
 
 type SessionAction =
@@ -55,7 +61,7 @@ let testRepositorySequence = 0;
 
 export function createInitialSession(input: CreateInitialSessionInput): Session {
   const now = new Date().toISOString();
-  const { playerProfile, ...modelConfig } = input;
+  const { playerProfile = EMPTY_PLAYER_PROFILE, ...modelConfig } = input;
 
   return SessionSchema.parse({
     sessionMeta: {

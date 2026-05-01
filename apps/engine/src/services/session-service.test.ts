@@ -57,6 +57,22 @@ describe('session-service', () => {
     });
   });
 
+  it('creates an initial session without an explicit player profile for legacy callers', () => {
+    const session = createInitialSession({
+      providerId: 'openai-compatible',
+      credentialProfileId: 'default',
+      storyModel: 'story-001',
+      logicModel: 'logic-001',
+      useDualModel: true,
+    });
+
+    expect(session.variableState.stat_data.玩家).toEqual({
+      姓名: '',
+      性别: '',
+      人设: '',
+    });
+  });
+
   it('keeps investigate actions out of the formal log', async () => {
     const session = createInitialSession({
       providerId: 'openai-compatible',
