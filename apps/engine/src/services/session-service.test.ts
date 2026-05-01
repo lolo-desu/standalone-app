@@ -6,6 +6,14 @@ import { describe, expect, it } from 'vitest';
 
 import { applyAction, createInitialSession, createSessionSnapshotRepository } from './session-service';
 
+function createTestPlayerProfile() {
+  return {
+    name: '林明霜',
+    gender: '女',
+    persona: '普通高中生，外冷内热。',
+  };
+}
+
 function createRepositoryTestSession() {
   return createInitialSession({
     providerId: 'openai-compatible',
@@ -13,6 +21,7 @@ function createRepositoryTestSession() {
     storyModel: 'story-001',
     logicModel: 'logic-001',
     useDualModel: true,
+    playerProfile: createTestPlayerProfile(),
   });
 }
 
@@ -27,19 +36,25 @@ async function withTempSavesDir(run: (savesDir: string) => void | Promise<void>)
 }
 
 describe('session-service', () => {
-  it('creates an initial session from new-game input', () => {
+  it('creates an initial session with the player profile inside stat_data.玩家', () => {
     const session = createInitialSession({
       providerId: 'openai-compatible',
       credentialProfileId: 'default',
       storyModel: 'story-001',
       logicModel: 'logic-001',
       useDualModel: true,
+      playerProfile: createTestPlayerProfile(),
     });
 
     expect(session.sessionMeta.workId).toBe('riji-luoluo');
     expect(session.sceneState.mode).toBe('dialog');
     expect(session.sceneState.speaker).toBe('络络');
     expect(session.sceneState.text).toBe('打……打扰了。那个，可以找一下……<user>同学吗？');
+    expect(session.variableState.stat_data.玩家).toEqual({
+      姓名: '林明霜',
+      性别: '女',
+      人设: '普通高中生，外冷内热。',
+    });
   });
 
   it('keeps investigate actions out of the formal log', async () => {
@@ -49,6 +64,7 @@ describe('session-service', () => {
       storyModel: 'story-001',
       logicModel: 'logic-001',
       useDualModel: true,
+      playerProfile: createTestPlayerProfile(),
     });
 
     const next = await applyAction(session, { kind: 'investigate', target: '教室周围' });
@@ -64,6 +80,7 @@ describe('session-service', () => {
       storyModel: 'story-001',
       logicModel: 'logic-001',
       useDualModel: true,
+      playerProfile: createTestPlayerProfile(),
     });
 
     const next = await applyAction(session, { kind: 'interact', text: '【看向络络】早上好。' });
@@ -80,6 +97,7 @@ describe('session-service', () => {
       storyModel: 'story-001',
       logicModel: 'logic-001',
       useDualModel: true,
+      playerProfile: createTestPlayerProfile(),
     });
 
     const afterInvestigate = await applyAction(session, { kind: 'investigate', target: '黑板' });
@@ -97,6 +115,7 @@ describe('session-service', () => {
       storyModel: 'story-001',
       logicModel: 'logic-001',
       useDualModel: true,
+      playerProfile: createTestPlayerProfile(),
     });
 
     const next = await applyAction(session, { kind: 'move', destination: '走廊' });
@@ -113,6 +132,7 @@ describe('session-service', () => {
       storyModel: 'story-001',
       logicModel: null,
       useDualModel: false,
+      playerProfile: createTestPlayerProfile(),
     });
 
     expect(session.modelConfig.logicModel).toBeNull();

@@ -5,6 +5,18 @@ const FIRST_GALGAME_SCENE_PATH = new URL(
   import.meta.url
 );
 const BUNDLED_FIRST_GALGAME_SCENE_PATH = new URL('./__fixtures__/1_galgame.txt', import.meta.url);
+const EMBEDDED_FIRST_GALGAME_SCENE = `<galgame>
+
+
+
+
+
+
+\`\`\`yaml
+- speaker: 络络
+  speech: 打……打扰了。那个，可以找一下……<user>同学吗？
+\`\`\`
+</galgame>`;
 
 type GalgameItem = Record<string, string>;
 
@@ -94,7 +106,7 @@ function readFirstGalgameScript() {
     }
   }
 
-  throw new Error('Unable to read the opening galgame script from either the external checkout or bundled fixture');
+  return EMBEDDED_FIRST_GALGAME_SCENE;
 }
 
 export function getFirstMessage() {

@@ -1,3 +1,4 @@
+import { isReactive, nextTick, watchEffect } from 'vue';
 import { describe, expect, it, vi } from 'vitest';
 
 import { createSessionStore } from './session';
@@ -13,6 +14,15 @@ function createTestSession(overrides: Record<string, unknown> = {}) {
     sceneState: { mode: 'dialog', text: 'test', speaker: 'test' },
     investigationState: { entries: [] },
     saveMeta: { quickSlotId: null, autoSlotId: null, manualSlotIds: [] },
+    ...overrides,
+  };
+}
+
+function createTestPlayerProfile(overrides: Partial<{ name: string; gender: string; persona: string }> = {}) {
+  return {
+    name: '林明霜',
+    gender: '女',
+    persona: '普通高中生，外冷内热。',
     ...overrides,
   };
 }
@@ -50,10 +60,170 @@ describe('createSessionStore', () => {
       storyModel: 'story-001',
       logicModel: 'logic-001',
       useDualModel: true,
+      playerProfile: createTestPlayerProfile(),
     });
 
     expect(api.createNewSession).toHaveBeenCalledOnce();
     expect(store.currentSession?.sceneState.text).toBe('第一条消息');
+  });
+
+  it('starts a new game from complete defaults and clears bootstrap state on success', async () => {
+    const api = createApi({
+      createNewSession: vi.fn().mockResolvedValue(
+        createTestSession({
+          sceneState: { mode: 'dialog', text: '第一条真实首帧', speaker: '络络' },
+        }),
+      ),
+    });
+
+    const store = createSessionStore(api);
+    const start = store.startNewGameFromDefaults({
+      defaultProviderId: 'openai-compatible',
+      defaultCredentialProfileId: 'default',
+      defaultStoryModel: 'story-001',
+      defaultLogicModel: null,
+      useDualModel: false,
+    });
+
+    expect(store.bootstrapState).toBe('starting');
+    await start;
+    expect(api.createNewSession).toHaveBeenCalledWith({
+      providerId: 'openai-compatible',
+      credentialProfileId: 'default',
+      storyModel: 'story-001',
+      logicModel: null,
+      useDualModel: false,
+      playerProfile: {
+        name: '',
+        gender: '',
+        persona: '',
+      },
+    });
+    expect(store.bootstrapState).toBe('idle');
+    expect(store.bootstrapError).toBeNull();
+    expect(store.currentSession?.sceneState.text).toBe('第一条真实首帧');
+  });
+
+  it('records bootstrap errors when automatic start fails', async () => {
+    const api = createApi({
+      createNewSession: vi.fn().mockRejectedValue(new Error('boom')),
+    });
+    const store = createSessionStore(api);
+
+    await store.startNewGameFromDefaults({
+      defaultProviderId: 'openai-compatible',
+      defaultCredentialProfileId: 'default',
+      defaultStoryModel: 'story-001',
+      defaultLogicModel: null,
+      useDualModel: false,
+    });
+
+    expect(store.bootstrapState).toBe('error');
+    expect(store.bootstrapError).toBe('boom');
+    expect(store.currentSession).toBeNull();
+  });
+
+  it('does nothing when defaults are incomplete', async () => {
+    const api = createApi();
+    const store = createSessionStore(api);
+
+    await store.startNewGameFromDefaults({
+      defaultProviderId: null,
+      defaultCredentialProfileId: null,
+      defaultStoryModel: null,
+      defaultLogicModel: null,
+      useDualModel: false,
+    });
+
+    expect(api.createNewSession).not.toHaveBeenCalled();
+    expect(store.bootstrapState).toBe('idle');
+    expect(store.bootstrapError).toBeNull();
+  });
+
+  it('does not auto-start again when a session already exists', async () => {
+    const api = createApi();
+    const store = createSessionStore(api);
+
+    store.receiveSession(createTestSession({
+      sceneState: { mode: 'dialog', text: '已有场景', speaker: '络络' },
+    }));
+
+    await store.startNewGameFromDefaults({
+      defaultProviderId: 'openai-compatible',
+      defaultCredentialProfileId: 'default',
+      defaultStoryModel: 'story-001',
+      defaultLogicModel: null,
+      useDualModel: false,
+    });
+
+    expect(api.createNewSession).not.toHaveBeenCalled();
+    expect(store.currentSession?.sceneState.text).toBe('已有场景');
+  });
+
+  it('does not auto-start again while bootstrap is already in progress', async () => {
+    let resolveCreate: ((value: unknown) => void) | null = null;
+    const api = createApi({
+      createNewSession: vi.fn().mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            resolveCreate = resolve;
+          }),
+      ),
+    });
+    const store = createSessionStore(api);
+
+    const firstStart = store.startNewGameFromDefaults({
+      defaultProviderId: 'openai-compatible',
+      defaultCredentialProfileId: 'default',
+      defaultStoryModel: 'story-001',
+      defaultLogicModel: null,
+      useDualModel: false,
+    });
+    await Promise.resolve();
+    await store.startNewGameFromDefaults({
+      defaultProviderId: 'openai-compatible',
+      defaultCredentialProfileId: 'default',
+      defaultStoryModel: 'story-001',
+      defaultLogicModel: null,
+      useDualModel: false,
+    });
+
+    expect(api.createNewSession).toHaveBeenCalledTimes(1);
+
+    resolveCreate?.(createTestSession());
+    await firstStart;
+  });
+
+  it('exposes reactive currentSession updates for renderer consumers', async () => {
+    const api = createApi({
+      createNewSession: vi.fn().mockResolvedValue(
+        createTestSession({
+          sceneState: { mode: 'dialog', text: 'reactive test', speaker: '络络' },
+        }),
+      ),
+    });
+
+    const store = createSessionStore(api);
+    let renderedText = 'empty';
+    const stop = watchEffect(() => {
+      renderedText = store.currentSession?.sceneState.text ?? 'empty';
+    });
+
+    expect(isReactive(store)).toBe(true);
+    expect(renderedText).toBe('empty');
+
+    await store.startNewGame({
+      providerId: 'test',
+      credentialProfileId: 'test',
+      storyModel: 'test',
+      logicModel: null,
+      useDualModel: false,
+      playerProfile: createTestPlayerProfile(),
+    });
+    await nextTick();
+
+    expect(renderedText).toBe('reactive test');
+    stop();
   });
 
   it('preserves formal log and investigation-only state from API sessions', async () => {
@@ -88,6 +258,7 @@ describe('createSessionStore', () => {
       storyModel: 'story-001',
       logicModel: 'logic-001',
       useDualModel: true,
+      playerProfile: createTestPlayerProfile(),
     });
 
     expect(store.currentSession?.logState.entries).toEqual([{ kind: 'interact', speaker: '你', text: '早上好。' }]);
@@ -119,6 +290,7 @@ describe('createSessionStore', () => {
         storyModel: 'story-001',
         logicModel: 'logic-001',
         useDualModel: true,
+        playerProfile: createTestPlayerProfile(),
       }),
     ).rejects.toThrow();
   });
@@ -137,7 +309,14 @@ describe('createSessionStore', () => {
     });
 
     const store = createSessionStore(api);
-    await store.startNewGame({ providerId: 'test', credentialProfileId: 'test', storyModel: 'test', logicModel: 'test', useDualModel: false });
+    await store.startNewGame({
+      providerId: 'test',
+      credentialProfileId: 'test',
+      storyModel: 'test',
+      logicModel: 'test',
+      useDualModel: false,
+      playerProfile: createTestPlayerProfile(),
+    });
 
     const initialSessionId = store.currentSession!.sessionMeta.id;
 
@@ -183,7 +362,14 @@ describe('createSessionStore', () => {
 
     const store = createSessionStore(api);
 
-    await store.startNewGame({ providerId: 'test', credentialProfileId: 'test', storyModel: 'test', logicModel: 'test', useDualModel: false });
+    await store.startNewGame({
+      providerId: 'test',
+      credentialProfileId: 'test',
+      storyModel: 'test',
+      logicModel: 'test',
+      useDualModel: false,
+      playerProfile: createTestPlayerProfile(),
+    });
     await store.quickSave();
     await store.quickLoad();
 
@@ -199,5 +385,75 @@ describe('createSessionStore', () => {
     await store.loadManualSlot('slot_3');
     expect(api.loadSaveSnapshot).toHaveBeenCalledWith('manual', 'slot_3');
     expect(store.currentSession!.saveMeta.manualSlotIds).toEqual(['slot_3']);
+  });
+
+  it('starts a new game from a submitted player profile and stores the returned player state', async () => {
+    const api = createApi({
+      createNewSession: vi.fn().mockResolvedValue(
+        createTestSession({
+          variableState: {
+            stat_data: {
+              玩家: {
+                姓名: '林明霜',
+                性别: '女',
+                人设: '普通高中生，外冷内热。',
+              },
+            },
+          },
+          sceneState: { mode: 'dialog', text: '第一条真实首帧', speaker: '络络' },
+        }),
+      ),
+    });
+    const store = createSessionStore(api);
+
+    await store.startNewGameWithProfile({
+      providerId: 'openai-compatible',
+      credentialProfileId: 'default',
+      storyModel: 'story-001',
+      logicModel: null,
+      useDualModel: false,
+      playerProfile: createTestPlayerProfile(),
+    });
+
+    expect(api.createNewSession).toHaveBeenCalledWith({
+      providerId: 'openai-compatible',
+      credentialProfileId: 'default',
+      storyModel: 'story-001',
+      logicModel: null,
+      useDualModel: false,
+      playerProfile: createTestPlayerProfile(),
+    });
+    expect(store.currentSession?.variableState.stat_data.玩家).toEqual({
+      姓名: '林明霜',
+      性别: '女',
+      人设: '普通高中生，外冷内热。',
+    });
+  });
+
+  it('sets bootstrapState to starting while a player-profile start is in flight', async () => {
+    let resolveCreate: ((value: unknown) => void) | null = null;
+    const api = createApi({
+      createNewSession: vi.fn().mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            resolveCreate = resolve;
+          }),
+      ),
+    });
+    const store = createSessionStore(api);
+
+    const start = store.startNewGameWithProfile({
+      providerId: 'openai-compatible',
+      credentialProfileId: 'default',
+      storyModel: 'story-001',
+      logicModel: null,
+      useDualModel: false,
+      playerProfile: createTestPlayerProfile({ gender: '', persona: '' }),
+    });
+
+    expect(store.bootstrapState).toBe('starting');
+    resolveCreate?.(createTestSession());
+    await start;
+    expect(store.bootstrapState).toBe('idle');
   });
 });

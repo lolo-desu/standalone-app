@@ -25,6 +25,13 @@ const NewSessionInputSchema = z
     storyModel: z.string(),
     logicModel: z.string().nullable(),
     useDualModel: z.boolean(),
+    playerProfile: z
+      .object({
+        name: z.string(),
+        gender: z.string(),
+        persona: z.string(),
+      })
+      .strict(),
   })
   .strict();
 

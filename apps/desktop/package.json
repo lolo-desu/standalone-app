@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "electrobun": "^1.16.0"
+    "electrobun": "^1.16.0",
+    "vue": "^3.5.32"
   }
 }

@@ -1,9 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
 
-vi.mock('./App.vue', () => ({
-  default: 'AppStub',
-}));
-
 vi.mock('./bootstrap', () => ({
   bootstrapRenderer: vi.fn().mockResolvedValue({
     apiClient: {
@@ -55,8 +51,9 @@ describe('renderer main wrapper', () => {
     const runtime = await bootstrapRenderer(dependencies);
 
     expect(bootstrapRendererRuntime).toHaveBeenCalledWith(dependencies);
+    expect(runtime.App).not.toBeTypeOf('string');
     expect(runtime).toEqual({
-      App: 'AppStub',
+      App: expect.any(Object),
       apiClient: {
         createNewSession: expect.any(Function),
         createSaveSnapshot: expect.any(Function),

@@ -75,8 +75,53 @@ describe('createApiClient', () => {
         storyModel: 'story-001',
         logicModel: 'logic-001',
         useDualModel: true,
+        playerProfile: {
+          name: '林明霜',
+          gender: '女',
+          persona: '普通高中生，外冷内热。',
+        },
       }),
     ).rejects.toThrow('Invalid session/new payload');
+  });
+
+  it('posts playerProfile together with the new-session payload', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue(createTestSession()),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const client = createApiClient('http://engine.test');
+
+    await client.createNewSession({
+      providerId: 'openai-compatible',
+      credentialProfileId: 'default',
+      storyModel: 'story-001',
+      logicModel: null,
+      useDualModel: false,
+      playerProfile: {
+        name: '林明霜',
+        gender: '女',
+        persona: '普通高中生，外冷内热。',
+      },
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith('http://engine.test/session/new', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        providerId: 'openai-compatible',
+        credentialProfileId: 'default',
+        storyModel: 'story-001',
+        logicModel: null,
+        useDualModel: false,
+        playerProfile: {
+          name: '林明霜',
+          gender: '女',
+          persona: '普通高中生，外冷内热。',
+        },
+      }),
+    });
   });
 
   it('throws the server error payload for failed save requests', async () => {

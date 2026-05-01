@@ -18,6 +18,11 @@ type CreateInitialSessionInput = {
   storyModel: string;
   logicModel: string | null;
   useDualModel: boolean;
+  playerProfile: {
+    name: string;
+    gender: string;
+    persona: string;
+  };
 };
 
 type SessionAction =
@@ -50,6 +55,7 @@ let testRepositorySequence = 0;
 
 export function createInitialSession(input: CreateInitialSessionInput): Session {
   const now = new Date().toISOString();
+  const { playerProfile, ...modelConfig } = input;
 
   return SessionSchema.parse({
     sessionMeta: {
@@ -58,7 +64,7 @@ export function createInitialSession(input: CreateInitialSessionInput): Session 
       createdAt: now,
       updatedAt: now,
     },
-    modelConfig: input,
+    modelConfig,
     gameState: {
       playerLocation: '教室',
       luoluoLocation: '教室',
@@ -69,6 +75,11 @@ export function createInitialSession(input: CreateInitialSessionInput): Session 
       stat_data: {
         世界: {
           当前地点: '教室',
+        },
+        玩家: {
+          姓名: playerProfile.name,
+          性别: playerProfile.gender,
+          人设: playerProfile.persona,
         },
       },
     },

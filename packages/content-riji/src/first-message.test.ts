@@ -52,6 +52,21 @@ describe('first-message', () => {
     });
   });
 
+  it('falls back to an embedded first message when both source files are unavailable', async () => {
+    const readFileSync = vi.fn(() => {
+      throw new Error('ENOENT: no galgame files are available in this runtime');
+    });
+
+    vi.doMock('node:fs', () => ({ readFileSync }));
+
+    const { getFirstMessage } = await import('./first-message');
+
+    expect(getFirstMessage()).toEqual({
+      speaker: '络络',
+      text: '打……打扰了。那个，可以找一下……<user>同学吗？',
+    });
+  });
+
   it('loads the first real luoluo dialog from the galgame opening script', async () => {
     const { getFirstMessage } = await import('./first-message');
     const msg = getFirstMessage();
