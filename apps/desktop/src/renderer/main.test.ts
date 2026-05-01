@@ -24,6 +24,7 @@ describe('bootstrapRenderer', () => {
       defaultStoryModel: 'story-001',
       defaultLogicModel: 'logic-001',
       useDualModel: true,
+      lastPlayerName: null,
     };
     const runtime = await bootstrapRenderer({
       configRpc: {
@@ -70,6 +71,7 @@ describe('bootstrapRenderer', () => {
               defaultStoryModel: null,
               defaultLogicModel: null,
               useDualModel: false,
+              lastPlayerName: null,
             },
           }),
           saveAppSettings: async (_payload: { settings: AppSettings }) => {},
@@ -84,6 +86,11 @@ describe('bootstrapRenderer', () => {
       storyModel: 'story-001',
       logicModel: null,
       useDualModel: false,
+      playerProfile: {
+        name: '林明霜',
+        gender: '女',
+        persona: '普通高中生，外冷内热。',
+      },
     });
 
     expect(fetchMock).toHaveBeenCalledWith('http://engine.test/session/new', expect.any(Object));

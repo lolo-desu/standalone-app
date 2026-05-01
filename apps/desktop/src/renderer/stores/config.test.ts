@@ -10,6 +10,7 @@ function createDefaultSettings(): AppSettings {
     defaultStoryModel: null,
     defaultLogicModel: null,
     useDualModel: false,
+    lastPlayerName: null,
   };
 }
 
@@ -30,6 +31,7 @@ describe('createConfigStore', () => {
       defaultStoryModel: 'story-001',
       defaultLogicModel: 'logic-001',
       useDualModel: true,
+      lastPlayerName: '林明霜',
     };
     const bridge = {
       loadCredentialProfiles: async () => profiles,
@@ -83,5 +85,26 @@ describe('createConfigStore', () => {
 
     expect(store.credentialProfiles).toEqual(nextProfiles);
     expect(store.appSettings).toEqual(nextSettings);
+  });
+
+  it('hydrates lastPlayerName from the preload bridge settings payload', async () => {
+    const bridge = {
+      loadCredentialProfiles: async () => [] as CredentialProfile[],
+      saveCredentialProfiles: async (_nextProfiles: CredentialProfile[]) => {},
+      loadAppSettings: async () => ({
+        defaultProviderId: null,
+        defaultCredentialProfileId: null,
+        defaultStoryModel: null,
+        defaultLogicModel: null,
+        useDualModel: false,
+        lastPlayerName: '林明霜',
+      }),
+      saveAppSettings: async (_nextSettings: AppSettings) => {},
+    };
+
+    const store = createConfigStore(bridge);
+    await store.hydrate();
+
+    expect(store.appSettings.lastPlayerName).toBe('林明霜');
   });
 });

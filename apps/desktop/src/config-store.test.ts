@@ -45,6 +45,7 @@ describe('config-store', () => {
         defaultStoryModel: null,
         defaultLogicModel: null,
         useDualModel: false,
+        lastPlayerName: null,
       });
     });
   });
@@ -74,6 +75,7 @@ describe('config-store', () => {
       defaultStoryModel: 'story-001',
       defaultLogicModel: 'logic-001',
       useDualModel: true,
+      lastPlayerName: '林明霜',
     };
 
     return withTempConfigStore(({ store }) => {
@@ -97,6 +99,32 @@ describe('config-store', () => {
         defaultStoryModel: null,
         defaultLogicModel: null,
         useDualModel: false,
+        lastPlayerName: null,
+      });
+    });
+  });
+
+  it('falls back to null lastPlayerName when older settings files omit it', () => {
+    return withTempConfigStore(({ store, settingsFile }) => {
+      mkdirSync(path.dirname(settingsFile), { recursive: true });
+      writeFileSync(
+        settingsFile,
+        JSON.stringify({
+          defaultProviderId: 'openai-compatible',
+          defaultCredentialProfileId: 'default',
+          defaultStoryModel: 'story-001',
+          defaultLogicModel: null,
+          useDualModel: false,
+        }),
+      );
+
+      expect(store.loadAppSettings()).toEqual({
+        defaultProviderId: 'openai-compatible',
+        defaultCredentialProfileId: 'default',
+        defaultStoryModel: 'story-001',
+        defaultLogicModel: null,
+        useDualModel: false,
+        lastPlayerName: null,
       });
     });
   });

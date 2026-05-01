@@ -75,6 +75,11 @@ describe('session routes', () => {
           storyModel: 'story-001',
           logicModel: 'logic-001',
           useDualModel: true,
+          playerProfile: {
+            name: '林明霜',
+            gender: '女',
+            persona: '普通高中生，外冷内热。',
+          },
         },
       },
       {
@@ -219,6 +224,44 @@ describe('session routes', () => {
       {
         body: {
           providerId: 'openai-compatible',
+        },
+      },
+      {
+        status(code: number) {
+          statusCode = code;
+          return this;
+        },
+        json(value: unknown) {
+          jsonResponse = value;
+        },
+      },
+    );
+
+    expect(statusCode).toBe(400);
+    expect(jsonResponse).toMatchObject({ error: 'Invalid session/new payload' });
+  });
+
+  it('returns a 400 response payload when playerProfile is missing from new-session input', async () => {
+    const routes = new Map<string, TestHandler>();
+    let statusCode = 200;
+    let jsonResponse: unknown;
+
+    await registerSessionRoutes({
+      post(path: string, handler: TestHandler) {
+        routes.set(path, handler);
+      },
+    });
+
+    const handler = routes.get('/session/new');
+
+    await handler?.(
+      {
+        body: {
+          providerId: 'openai-compatible',
+          credentialProfileId: 'default',
+          storyModel: 'story-001',
+          logicModel: null,
+          useDualModel: false,
         },
       },
       {
