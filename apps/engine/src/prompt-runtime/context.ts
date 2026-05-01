@@ -3,14 +3,17 @@ import type { Session } from '@lologames/shared';
 import type {
   ContextPreset,
   InstructPreset,
+  LorebookAsset,
   PromptMessage,
   PromptRuntimeContext,
   PromptSections,
 } from './types';
+import { matchLorebookEntries } from './lorebook-match';
 
 type BuildPromptRuntimeContextOptions = {
   contextPreset?: ContextPreset;
   instructPreset?: InstructPreset | null;
+  lorebook?: LorebookAsset | null;
 };
 
 const DEFAULT_CONTEXT_PRESET: ContextPreset = {
@@ -92,6 +95,10 @@ function toChatMessage(entry: Session['logState']['entries'][number], playerName
   };
 }
 
+function joinLorebookTexts(texts: string[]): string {
+  return texts.filter((text) => text.length > 0).join('\n\n');
+}
+
 export function buildPromptRuntimeContext(
   session: Session,
   options: BuildPromptRuntimeContextOptions = {},
@@ -101,7 +108,7 @@ export function buildPromptRuntimeContext(
   const playerName = asString(player?.姓名);
   const characterName = session.sceneState.speaker ?? '络络';
 
-  return {
+  const baseContext: PromptRuntimeContext = {
     session,
     contextPreset: options.contextPreset ?? DEFAULT_CONTEXT_PRESET,
     instructPreset: options.instructPreset ?? null,
@@ -113,5 +120,20 @@ export function buildPromptRuntimeContext(
       persona: buildPersonaSection(statData),
     },
     chatHistory: session.logState.entries.map((entry) => toChatMessage(entry, playerName)),
+  };
+
+  const matchedEntries = matchLorebookEntries(baseContext, options.lorebook);
+
+  return {
+    ...baseContext,
+    sections: {
+      ...baseContext.sections,
+      wiBefore: joinLorebookTexts(
+        matchedEntries.filter((entry) => entry.insertionPosition === 'before_history').map((entry) => entry.text),
+      ),
+      wiAfter: joinLorebookTexts(
+        matchedEntries.filter((entry) => entry.insertionPosition === 'after_history').map((entry) => entry.text),
+      ),
+    },
   };
 }

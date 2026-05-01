@@ -202,6 +202,136 @@ describe('session routes', () => {
     });
   });
 
+  it('delegates formal actions to the orchestrator and still refreshes auto saves', async () => {
+    const routes = new Map<string, TestHandler>();
+    let actionResponse: unknown;
+    let loadResponse: unknown;
+    let orchestratorCallCount = 0;
+
+    await registerSessionRoutes(
+      {
+        post(path: string, handler: TestHandler) {
+          routes.set(path, handler);
+        },
+      },
+      {
+        orchestrateFormalAction: async (session, action) => {
+          orchestratorCallCount += 1;
+
+          expect(action).toEqual({ kind: 'move', destination: '走廊' });
+
+          return {
+            ...session,
+            sceneState: {
+              mode: 'dialog',
+              text: '络络已经在走廊等你。',
+              speaker: '络络',
+            },
+            saveMeta: session.saveMeta,
+          };
+        },
+      },
+    );
+
+    await routes.get('/session/action')?.(
+      {
+        body: {
+          session: createTestSession(),
+          action: {
+            kind: 'move',
+            destination: '走廊',
+          },
+        },
+      },
+      {
+        status() {
+          return this;
+        },
+        json(value: unknown) {
+          actionResponse = value;
+        },
+      },
+    );
+
+    await routes.get('/session/load')?.(
+      {
+        body: {
+          kind: 'auto',
+          slotId: null,
+        },
+      },
+      {
+        status() {
+          return this;
+        },
+        json(value: unknown) {
+          loadResponse = value;
+        },
+      },
+    );
+
+    expect(orchestratorCallCount).toBe(1);
+    expect(actionResponse).toMatchObject({
+      sceneState: {
+        text: '络络已经在走廊等你。',
+      },
+      saveMeta: {
+        autoSlotId: 'save_auto',
+      },
+    });
+    expect(loadResponse).toMatchObject({
+      sceneState: {
+        text: '络络已经在走廊等你。',
+      },
+      saveMeta: {
+        autoSlotId: 'save_auto',
+      },
+    });
+  });
+
+  it('keeps investigate actions on the existing local path instead of delegating to the orchestrator', async () => {
+    const routes = new Map<string, TestHandler>();
+    let orchestratorCallCount = 0;
+    let jsonResponse: unknown;
+
+    await registerSessionRoutes(
+      {
+        post(path: string, handler: TestHandler) {
+          routes.set(path, handler);
+        },
+      },
+      {
+        orchestrateFormalAction: async () => {
+          orchestratorCallCount += 1;
+          throw new Error('should not be called');
+        },
+      },
+    );
+
+    await routes.get('/session/action')?.(
+      {
+        body: {
+          session: createTestSession(),
+          action: {
+            kind: 'investigate',
+            target: '教室周围',
+          },
+        },
+      },
+      {
+        status() {
+          return this;
+        },
+        json(value: unknown) {
+          jsonResponse = value;
+        },
+      },
+    );
+
+    expect(orchestratorCallCount).toBe(0);
+    expect((jsonResponse as { investigationState: { entries: unknown[] } }).investigationState.entries).toHaveLength(1);
+  });
+
   it('returns a 400 response payload for invalid new-session input', async () => {
     const routes = new Map<string, TestHandler>();
     let statusCode = 200;
