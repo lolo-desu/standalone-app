@@ -12,6 +12,7 @@ type AppSettings = {
   defaultStoryModel: string | null;
   defaultLogicModel: string | null;
   useDualModel: boolean;
+  lastPlayerName: string | null;
 };
 
 type CredentialProfile = {
@@ -29,6 +30,7 @@ function createDefaultAppSettings(): AppSettings {
     defaultStoryModel: null,
     defaultLogicModel: null,
     useDualModel: false,
+    lastPlayerName: null,
   };
 }
 
@@ -101,6 +103,7 @@ function parseAppSettings(payload: unknown): AppSettings {
     defaultStoryModel: typeof record.defaultStoryModel === 'string' ? record.defaultStoryModel : null,
     defaultLogicModel: typeof record.defaultLogicModel === 'string' ? record.defaultLogicModel : null,
     useDualModel: record.useDualModel === true,
+    lastPlayerName: typeof record.lastPlayerName === 'string' ? record.lastPlayerName : null,
   };
 }
 

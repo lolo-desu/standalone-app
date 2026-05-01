@@ -3,6 +3,16 @@ import { Electroview } from 'electrobun/view';
 
 import { bootstrapElectrobunRenderer } from './electrobun-entry';
 
+function renderStartupStatus(stage: string) {
+  console.info('[renderer:index] startup stage', stage);
+  const appRoot = document.querySelector('#app');
+  if (!(appRoot instanceof HTMLElement)) {
+    return;
+  }
+
+  appRoot.innerHTML = `<main style="min-height:100vh;display:flex;align-items:center;justify-content:center;margin:0;background:#120f17;color:#f6eef7;font-family:system-ui,sans-serif;padding:24px;box-sizing:border-box;"><section style="max-width:720px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);border-radius:16px;padding:24px;box-shadow:0 16px 48px rgba(0,0,0,0.28);"><h1 style="margin:0 0 12px;font-size:24px;">渲染器启动中</h1><p style="margin:0;line-height:1.7;">当前阶段: <strong>${escapeHtml(stage)}</strong></p></section></main>`;
+}
+
 function renderStartupError(error: unknown) {
   const appRoot = document.querySelector('#app');
   if (!(appRoot instanceof HTMLElement)) {
@@ -22,11 +32,19 @@ function escapeHtml(value: string) {
     .replaceAll("'", '&#39;');
 }
 
+renderStartupStatus('bootstrap');
+
 void bootstrapElectrobunRenderer({
   Electroview,
 })
-  .then(({ App }) => {
-    createApp(App).mount('#app');
+  .then(async ({ App, sessionStore }) => {
+    renderStartupStatus('createApp');
+    const app = createApp(App, {
+      sessionStore,
+    });
+
+    renderStartupStatus('mount');
+    app.mount('#app');
   })
   .catch((error) => {
     console.error('Renderer bootstrap failed', error);

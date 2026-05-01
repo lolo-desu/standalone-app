@@ -8,6 +8,7 @@ function createDefaultSettings(): AppSettings {
     defaultStoryModel: null,
     defaultLogicModel: null,
     useDualModel: false,
+    lastPlayerName: null,
   };
 }
 
